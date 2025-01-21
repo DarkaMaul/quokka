@@ -1,8 +1,9 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
 
 jobs:
   build_wheels:
@@ -11,26 +12,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.10'
-      - name: Install dependencies
-        run: pip install wheel
       - name: Build wheel
-        run: pip wheel -w wheels .
+        run: uv build --wheel
       - uses: actions/upload-artifact@v3
         with:
-          path: ./wheels/quokka*.whl
+          path: ./dist/*.whl
 
   build_sdist:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.10'
       - name: Build sdist
-        run: python setup.py sdist
+        run: uv build --sdist
       - uses: actions/upload-artifact@v3
         with:
           path: dist/*.tar.gz
@@ -39,19 +38,17 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          # unpacks default artifact into dist/
-          # if `name: artifact` is omitted, the action will create extra parent dir
-          name: artifact
           path: dist
+          merge-multiple: true
 
-      - name: Publish a Python distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.5.1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      # - name: Publish a Python distribution to PyPI
+      #   uses: pypa/gh-action-pypi-publish@v1.12.3
+      #   with:
+      #     attestations: true
 
-      - name: Upload Python packages for release notes
-        uses: softprops/action-gh-release@v0.1.14
-        with:
-          files: dist/*
+      # - name: Upload Python packages for release notes
+      #   uses: softprops/action-gh-release@v0.1.14
+      #   with:
+      #     files: dist/*
